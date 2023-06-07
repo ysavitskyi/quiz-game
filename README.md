@@ -44,3 +44,12 @@ You don’t have to ever use `eject`. The curated feature set is suitable for sm
 You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
 To learn React, check out the [React documentation](https://reactjs.org/).
+
+## TODO (what isn't done due to the time constraint)
+
+- add nice UI/UX
+- pretify game logic (make it more abstract/ui-agnostic and scalable)
+- add more interactions (remove user, reset current game/session, etc...)
+- add unit tests
+- move texts into an individual scope
+- add ability for a saving game session (at least using browser storages)
