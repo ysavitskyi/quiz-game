@@ -1,48 +1,63 @@
-import { useCallback, useState } from 'react'
+import {
+  Box,
+  FormControl,
+  FormLabel,
+  FormControlLabel,
+  RadioGroup,
+  Radio,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+} from '@mui/material'
 
 import { INode } from '../../types'
+import { useCallback } from 'react'
 
 const QuestionNode: React.FC<
-  INode & { disabled: boolean; isInvalid: boolean; currentAnswer?: string }
-> = ({ id, question, answers, disabled, isInvalid, currentAnswer }) => {
-  const [visible, setVisible] = useState(false)
-  const toggleFold = useCallback(() => {
-    setVisible((visible) => !visible)
-  }, [])
+  INode & {
+    value?: string
+    disabled: boolean
+    isInvalid: boolean
+    onChange: (questionId: string, answerId: string) => void
+  }
+> = ({
+  id,
+  question,
+  answers,
+  value,
+  disabled,
+  isInvalid,
+  onChange: outerOnChange,
+}) => {
+  const onChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>, value: string) => {
+      outerOnChange(id, value)
+    },
+    [id, outerOnChange]
+  )
 
   return (
-    <fieldset disabled={disabled}>
-      <legend
-        onClick={toggleFold}
-        style={{
-          cursor: 'pointer',
-        }}
-      >
-        {question}
-      </legend>
-      <div
-        style={{
-          ...(!visible && {
-            position: 'absolute',
-            visibility: 'hidden',
-            zIndex: -1,
-          }),
-        }}
-      >
-        {answers.map((answer) => (
-          <label
-            key={answer.id}
-            style={{
-              color: currentAnswer === answer.id && isInvalid ? 'red' : '',
-            }}
-          >
-            <input type="radio" name={id} value={answer.id} />
-            {answer.answer}
-            <br />
-          </label>
-        ))}
-      </div>
-    </fieldset>
+    <Box mb={1}>
+      <FormControl disabled={disabled} error={isInvalid} fullWidth>
+        <Accordion>
+          <AccordionSummary>
+            <FormLabel>{question}</FormLabel>
+          </AccordionSummary>
+          <AccordionDetails>
+            <RadioGroup name={id} value={value || null} onChange={onChange}>
+              {answers.map((answer) => (
+                <FormControlLabel
+                  key={answer.id}
+                  value={answer.id}
+                  label={answer.answer}
+                  control={<Radio />}
+                />
+              ))}
+            </RadioGroup>
+          </AccordionDetails>
+        </Accordion>
+      </FormControl>
+    </Box>
   )
 }
 

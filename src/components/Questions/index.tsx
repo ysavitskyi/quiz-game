@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { Box, Button } from '@mui/material'
 
-import { evaluate } from '../../services'
 import { INode } from '../../types'
 
 import QuestionNode from './QuestionNode'
@@ -8,28 +8,20 @@ import QuestionNode from './QuestionNode'
 const Questions: React.FC<{
   nodes: INode[]
   disabled: boolean
-  setScore: (score: number) => void
   resetRef: React.MutableRefObject<() => void>
-}> = ({ nodes, disabled, setScore, resetRef }) => {
-  const formRef = useRef<HTMLFormElement>(null)
-
+  onSubmit: (
+    solutions: {
+      question_id: string
+      answer_id: string
+    }[],
+    setInvalidNodes: (ids: string[]) => void
+  ) => void
+}> = ({ nodes, disabled, onSubmit: outerOnSubmit, resetRef }) => {
   const [entries, setEntries] = useState<Record<string, string>>({})
   const [invalidNodes, setInvalidNodes] = useState<string[]>([])
 
-  const onChange = useCallback((event: React.FormEvent<HTMLFormElement>) => {
-    if (!formRef.current) return
-
-    const formData = new FormData(formRef.current)
-    const entries = Object.fromEntries(formData.entries()) as Record<
-      string,
-      string
-    >
-
-    setEntries(entries)
-  }, [])
-
   const onSubmit = useCallback(
-    async (event: React.FormEvent<HTMLFormElement>) => {
+    (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault()
       const formData = new FormData(event.target as HTMLFormElement)
       const entries = [...formData.entries()] as [string, string][]
@@ -38,51 +30,56 @@ const Questions: React.FC<{
         answer_id,
       }))
 
-      try {
-        const { res } = await evaluate(solutions)
-
-        if (res?.data) {
-          const invalidNodes = res.data.wrongAnswers?.map(
-            ({ question_id }) => question_id
-          )
-          setInvalidNodes(invalidNodes)
-          setScore(res.data.score)
-        }
-      } catch (error) {}
+      outerOnSubmit(solutions, setInvalidNodes)
     },
-    [setScore]
+    [outerOnSubmit]
   )
 
   const onReset = useCallback(() => {
     setEntries({})
     setInvalidNodes([])
-
-    formRef.current?.reset()
   }, [])
+
+  const onFieldChange = (questionId: string, answerId: string) => {
+    setEntries((entries) => ({ ...entries, [questionId]: answerId }))
+  }
 
   useEffect(() => {
     resetRef.current = onReset // TODO: overwrite via proper approach
   }, [resetRef, onReset])
 
   return (
-    <form ref={formRef} onSubmit={onSubmit} onChange={onChange}>
+    <Box onSubmit={onSubmit} onReset={onReset} component="form">
       {nodes.map((node) => (
         <QuestionNode
           key={node.id}
           isInvalid={invalidNodes.includes(node.id)}
-          currentAnswer={entries[node.id]}
           disabled={disabled}
+          value={entries[node.id]}
+          onChange={onFieldChange}
           {...node}
         />
       ))}
       <br />
-      <button
+      <Button
         type="submit"
+        size="small"
+        variant="contained"
         disabled={disabled || Object.keys(entries).length !== nodes.length}
       >
         Submit
-      </button>
-    </form>
+      </Button>
+      &nbsp;
+      <Button
+        type="reset"
+        size="small"
+        variant="contained"
+        color="secondary"
+        disabled={disabled || Object.keys(entries).length === 0}
+      >
+        Reset
+      </Button>
+    </Box>
   )
 }
 

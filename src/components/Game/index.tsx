@@ -1,4 +1,7 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Box, List, ListItem, Typography, Button, Drawer } from '@mui/material'
+
+import { evaluate } from '../../services'
 
 import GameBoard from '../GameBoard'
 import Questions from '../Questions'
@@ -28,55 +31,122 @@ const Game: React.FC = () => {
     }
   }, [])
 
+  const removePlayer = useCallback((name: string) => {
+    setPlayers((players) => {
+      const newPlayers = players.filter((player) => player.name !== name)
+      localStorage.setItem('players', JSON.stringify(newPlayers))
+
+      return newPlayers
+    })
+
+    resetQuestionsRef.current()
+  }, [])
+
   const setScore = useCallback((score: number) => {
-    setPlayers((players) => [
-      ...players.slice(0, -1),
-      { ...players.slice(-1)[0], score },
-    ])
+    setPlayers((players) => {
+      const newPlayers = [
+        ...players.slice(0, -1),
+        { ...players.slice(-1)[0], score },
+      ]
+      localStorage.setItem('players', JSON.stringify(newPlayers))
+
+      return newPlayers
+    })
+  }, [])
+
+  const onSubmit = useCallback(
+    async (
+      solutions: {
+        question_id: string
+        answer_id: string
+      }[],
+      setInvalidNodes: (ids: string[]) => void
+    ) => {
+      try {
+        const { res } = await evaluate(solutions)
+
+        if (res?.data) {
+          const invalidNodes = res.data.wrongAnswers?.map(
+            ({ question_id }) => question_id
+          )
+          setInvalidNodes(invalidNodes)
+          setScore(res.data.score)
+        }
+      } catch (error) {
+        // handle error
+      }
+    },
+    [setScore]
+  )
+
+  useEffect(() => {
+    const players = localStorage.getItem('players')
+    if (players) {
+      setPlayers(JSON.parse(players))
+    }
   }, [])
 
   if (loading) {
-    return <div>Loading...</div>
+    return <Box>Loading...</Box>
   }
 
   if (error) {
-    return <div>Error in the query {error.message}</div>
+    return <Box>Error in the query {error.message}</Box>
   }
 
   if (!data) {
-    return <div>No Data</div>
+    return <Box>No Data</Box>
   }
 
   return (
-    <div>
-      <GameBoard players={players} addPlayer={addPlayer} />
+    <Box position="relative">
+      <Rules />
+      <GameBoard
+        players={players}
+        addPlayer={addPlayer}
+        removePlayer={removePlayer}
+      />
+      <br />
       <br />
       <Questions
         nodes={data.questions_aggregate.nodes}
         disabled={!players[0] || players[players.length - 1].score !== null}
-        setScore={setScore}
         resetRef={resetQuestionsRef}
+        onSubmit={onSubmit}
       />
-      <h2>Rules</h2>
-      <ul>
-        <li>- Create player and start quiz</li>
-        <li>- When all questions answered press Submit</li>
-        <li>
-          - After validation is done there's possible to create a new Player and
-          run the quiz anew
-        </li>
-        <li>
-          * There is not possible to submit result or create a new Player until
-          current session is done
-        </li>
-        <li>* Quiz is freezed until a Player is created</li>
-        <li>* A Player name should be uniq</li>
-        <li>
-          * The game record is alive only along current browser tab session
-          (stored only in ongoing runtime)
-        </li>
-      </ul>
-    </div>
+      <br />
+    </Box>
+  )
+}
+
+const Rules: React.FC = () => {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <Box position="absolute" top={0} right={0}>
+      <Button onClick={() => setOpen(true)} size="small">
+        Rules
+      </Button>
+      <Drawer anchor="right" open={open} onClose={() => setOpen(false)}>
+        <Box padding="1em">
+          <Typography variant="h2">Rules</Typography>
+          <List>
+            <ListItem>- Create player and start quiz</ListItem>
+            <ListItem>- When all questions answered press Submit</ListItem>
+            <ListItem>
+              - After validation is done there's possible to create a new Player
+              and run the quiz anew
+            </ListItem>
+            <ListItem>
+              * There is not possible to submit result or create a new Player
+              until current session is done
+            </ListItem>
+            <ListItem>* Quiz is freezed until a Player is created</ListItem>
+            <ListItem>* A Player name should be uniq</ListItem>
+          </List>
+        </Box>
+      </Drawer>
+    </Box>
   )
 }
 
