@@ -2,6 +2,10 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## ATTENTION
+
+Before running/building the application locally there needs to create .env file with the config currently located in .env.dist. It's done because of in the live app we don't store such information such way
+
 ## Available Scripts
 
 In the project directory, you can run:
